@@ -43,9 +43,6 @@
         "psr/container": "^1.0 for usage of provided factories",
         "sandrokeil/interop-config": "For usage of provided factories"
     },
-    "conflict": {
-        "sandrokeil/interop-config": "<2.0.1"
-    },
     "autoload": {
         "psr-4": {
             "Prooph\\ServiceBus\\": "src/"
