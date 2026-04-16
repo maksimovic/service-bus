@@ -27,19 +27,15 @@ use Prooph\ServiceBus\Plugin\Router\SingleHandlerRouter;
 use ProophTest\ServiceBus\Mock\AsyncCommand;
 use ProophTest\ServiceBus\Mock\AsyncEvent;
 use ProophTest\ServiceBus\Mock\NonAsyncCommand;
-use Prophecy\PhpUnit\ProphecyTrait;
 
 class AsyncSwitchMessageRouterTest extends TestCase
 {
-    use ProphecyTrait;
-
     /**
      * @test
      */
     public function it_sets_message_producer_as_message_handler_on_dispatch_initialize(): void
     {
-        $messageProducer = $this->prophesize(MessageProducer::class);
-        $messageProducer = $messageProducer->reveal();
+        $messageProducer = $this->createMock(MessageProducer::class);
 
         $commandBus = new CommandBus();
 
@@ -68,9 +64,9 @@ class AsyncSwitchMessageRouterTest extends TestCase
      */
     public function it_returns_early_when_message_name_is_empty(): void
     {
-        $messageProducer = $this->prophesize(MessageProducer::class);
+        $messageProducer = $this->createMock(MessageProducer::class);
 
-        $router = new AsyncSwitchMessageRouter(new SingleHandlerRouter(), $messageProducer->reveal());
+        $router = new AsyncSwitchMessageRouter(new SingleHandlerRouter(), $messageProducer);
 
         $actionEvent = new DefaultActionEvent(
             MessageBus::EVENT_DISPATCH,
@@ -95,8 +91,8 @@ class AsyncSwitchMessageRouterTest extends TestCase
      */
     public function unmarked_message_is_passed_to_decorated_router()
     {
-        $messageProducer = $this->prophesize(MessageProducer::class);
-        $decoratedRouter = $this->prophesize(SingleHandlerRouter::class);
+        $messageProducer = $this->createMock(MessageProducer::class);
+        $decoratedRouter = $this->createMock(SingleHandlerRouter::class);
 
         $message = NonAsyncCommand::createCommand('test-data');
         $actionEvent = new DefaultActionEvent(
@@ -108,9 +104,9 @@ class AsyncSwitchMessageRouterTest extends TestCase
             ]
         );
 
-        $decoratedRouter->onRouteMessage($actionEvent)->shouldBeCalled();
+        $decoratedRouter->expects($this->once())->method('onRouteMessage')->with($actionEvent);
 
-        $router = new AsyncSwitchMessageRouter($decoratedRouter->reveal(), $messageProducer->reveal());
+        $router = new AsyncSwitchMessageRouter($decoratedRouter, $messageProducer);
         $router->onRouteMessage($actionEvent);
 
         $updatedMessage = $actionEvent->getParam(MessageBus::EVENT_PARAM_MESSAGE);
@@ -122,7 +118,7 @@ class AsyncSwitchMessageRouterTest extends TestCase
      */
     public function marked_message_is_passed_to_async_producer()
     {
-        $messageProducer = $this->prophesize(MessageProducer::class);
+        $messageProducer = $this->createMock(MessageProducer::class);
 
         $message = AsyncCommand::createCommand('test-data');
         $actionEvent = new DefaultActionEvent(
@@ -134,10 +130,10 @@ class AsyncSwitchMessageRouterTest extends TestCase
             ]
         );
 
-        $router = new AsyncSwitchMessageRouter(new SingleHandlerRouter(), $messageProducer->reveal());
+        $router = new AsyncSwitchMessageRouter(new SingleHandlerRouter(), $messageProducer);
         $router->onRouteMessage($actionEvent);
 
-        $this->assertEquals($messageProducer->reveal(), $actionEvent->getParam(MessageBus::EVENT_PARAM_MESSAGE_HANDLER));
+        $this->assertEquals($messageProducer, $actionEvent->getParam(MessageBus::EVENT_PARAM_MESSAGE_HANDLER));
 
         $updatedMessage = $actionEvent->getParam(MessageBus::EVENT_PARAM_MESSAGE);
         $this->assertArrayHasKey('handled-async', $updatedMessage->metadata());
@@ -149,8 +145,8 @@ class AsyncSwitchMessageRouterTest extends TestCase
      */
     public function marked_message_is_passed_to_decorated_router_as_already_handled_by_async_provider()
     {
-        $messageProducer = $this->prophesize(MessageProducer::class);
-        $decoratedRouter = $this->prophesize(SingleHandlerRouter::class);
+        $messageProducer = $this->createMock(MessageProducer::class);
+        $decoratedRouter = $this->createMock(SingleHandlerRouter::class);
 
         $message = AsyncCommand::createCommand('test-data');
         $message = $message->withAddedMetadata('handled-async', true);
@@ -164,9 +160,9 @@ class AsyncSwitchMessageRouterTest extends TestCase
             ]
         );
 
-        $decoratedRouter->onRouteMessage($actionEvent)->shouldBeCalled();
+        $decoratedRouter->expects($this->once())->method('onRouteMessage')->with($actionEvent);
 
-        $router = new AsyncSwitchMessageRouter($decoratedRouter->reveal(), $messageProducer->reveal());
+        $router = new AsyncSwitchMessageRouter($decoratedRouter, $messageProducer);
         $router->onRouteMessage($actionEvent);
 
         $updatedMessage = $actionEvent->getParam(MessageBus::EVENT_PARAM_MESSAGE);
@@ -179,7 +175,7 @@ class AsyncSwitchMessageRouterTest extends TestCase
      */
     public function it_sets_message_producer_as_event_listener_if_target_is_an_event_bus(): void
     {
-        $messageProducer = $this->prophesize(MessageProducer::class);
+        $messageProducer = $this->createMock(MessageProducer::class);
 
         $message = AsyncEvent::createEvent('test-data');
 
@@ -192,10 +188,10 @@ class AsyncSwitchMessageRouterTest extends TestCase
             ]
         );
 
-        $router = new AsyncSwitchMessageRouter(new EventRouter(), $messageProducer->reveal());
+        $router = new AsyncSwitchMessageRouter(new EventRouter(), $messageProducer);
         $router->onRouteMessage($actionEvent);
 
-        $this->assertEquals($messageProducer->reveal(), $actionEvent->getParam(EventBus::EVENT_PARAM_EVENT_LISTENERS)[0]);
+        $this->assertEquals($messageProducer, $actionEvent->getParam(EventBus::EVENT_PARAM_EVENT_LISTENERS)[0]);
 
         $updatedMessage = $actionEvent->getParam(MessageBus::EVENT_PARAM_MESSAGE);
         $this->assertArrayHasKey('handled-async', $updatedMessage->metadata());
@@ -207,20 +203,20 @@ class AsyncSwitchMessageRouterTest extends TestCase
      */
     public function it_throws_exception_if_target_is_unknown_bus(): void
     {
-        $messageProducer = $this->prophesize(MessageProducer::class);
+        $messageProducer = $this->createMock(MessageProducer::class);
 
         $message = AsyncEvent::createEvent('test-data');
 
         $actionEvent = new DefaultActionEvent(
             MessageBus::EVENT_DISPATCH,
-            $this->prophesize(MessageBus::class),
+            $this->createMock(MessageBus::class),
             [
                 MessageBus::EVENT_PARAM_MESSAGE_NAME => \get_class($message),
                 MessageBus::EVENT_PARAM_MESSAGE => $message,
             ]
         );
 
-        $router = new AsyncSwitchMessageRouter(new EventRouter(), $messageProducer->reveal());
+        $router = new AsyncSwitchMessageRouter(new EventRouter(), $messageProducer);
         try {
             $router->onRouteMessage($actionEvent);
             $this->fail();

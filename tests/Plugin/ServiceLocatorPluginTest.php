@@ -21,13 +21,10 @@ use Prooph\ServiceBus\Plugin\Router\EventRouter;
 use Prooph\ServiceBus\Plugin\ServiceLocatorPlugin;
 use ProophTest\ServiceBus\Mock\MessageHandler;
 use ProophTest\ServiceBus\Mock\SomethingDone;
-use Prophecy\PhpUnit\ProphecyTrait;
 use Psr\Container\ContainerInterface;
 
 class ServiceLocatorPluginTest extends TestCase
 {
-    use ProphecyTrait;
-
     /**
      * @test
      */
@@ -35,15 +32,14 @@ class ServiceLocatorPluginTest extends TestCase
     {
         $handler = new MessageHandler();
 
-        $container = $this->prophesize(ContainerInterface::class);
+        $container = $this->createMock(ContainerInterface::class);
 
-        $container->has('custom-handler')->willReturn(true)->shouldBeCalled();
-
-        $container->get('custom-handler')->willReturn($handler)->shouldBeCalled();
+        $container->expects($this->atLeastOnce())->method('has')->with('custom-handler')->willReturn(true);
+        $container->expects($this->atLeastOnce())->method('get')->with('custom-handler')->willReturn($handler);
 
         $commandBus = new CommandBus();
 
-        $locatorPlugin = new ServiceLocatorPlugin($container->reveal());
+        $locatorPlugin = new ServiceLocatorPlugin($container);
         $locatorPlugin->attachToMessageBus($commandBus);
 
         $commandBus->attach(
@@ -70,11 +66,10 @@ class ServiceLocatorPluginTest extends TestCase
 
         $handlerTwo = new MessageHandler();
 
-        $container = $this->prophesize(ContainerInterface::class);
+        $container = $this->createMock(ContainerInterface::class);
 
-        $container->has('custom-handler')->willReturn(true)->shouldBeCalled();
-
-        $container->get('custom-handler')->willReturn($handlerTwo)->shouldBeCalled();
+        $container->expects($this->atLeastOnce())->method('has')->with('custom-handler')->willReturn(true);
+        $container->expects($this->atLeastOnce())->method('get')->with('custom-handler')->willReturn($handlerTwo);
 
         $eventBus = new EventBus();
 
@@ -83,7 +78,7 @@ class ServiceLocatorPluginTest extends TestCase
 
         $router->attachToMessageBus($eventBus);
 
-        $locatorPlugin = new ServiceLocatorPlugin($container->reveal());
+        $locatorPlugin = new ServiceLocatorPlugin($container);
 
         $locatorPlugin->attachToMessageBus($eventBus);
 
@@ -103,20 +98,23 @@ class ServiceLocatorPluginTest extends TestCase
         $eventBus = new EventBus();
         $router = new EventRouter();
 
-        $container = $this->prophesize(ContainerInterface::class);
+        $container = $this->createMock(ContainerInterface::class);
 
-        $container->has('handler-one')->willReturn(true)->shouldBeCalled();
-        $container->get('handler-one')->willReturn($handlerOne)->shouldBeCalled();
-
-        $container->has('handler-two')->willReturn(true)->shouldBeCalled();
-        $container->get('handler-two')->willReturn($handlerTwo)->shouldBeCalled();
+        $container->method('has')->willReturnMap([
+            ['handler-one', true],
+            ['handler-two', true],
+        ]);
+        $container->method('get')->willReturnMap([
+            ['handler-one', $handlerOne],
+            ['handler-two', $handlerTwo],
+        ]);
 
         $router->route(SomethingDone::class)->to('handler-one');
         $router->route(SomethingDone::class)->to('handler-two');
 
         $router->attachToMessageBus($eventBus);
 
-        $locatorPlugin = new ServiceLocatorPlugin($container->reveal());
+        $locatorPlugin = new ServiceLocatorPlugin($container);
 
         $locatorPlugin->attachToMessageBus($eventBus);
 

@@ -18,26 +18,23 @@ use Prooph\ServiceBus\Container\Plugin\Guard\RouteGuardFactory;
 use Prooph\ServiceBus\Exception\InvalidArgumentException;
 use Prooph\ServiceBus\Plugin\Guard\AuthorizationService;
 use Prooph\ServiceBus\Plugin\Guard\RouteGuard;
-use Prophecy\PhpUnit\ProphecyTrait;
 use Psr\Container\ContainerInterface;
 
 class RouteGuardFactoryTest extends TestCase
 {
-    use ProphecyTrait;
-
     /**
      * @test
      */
     public function it_creates_route_guard(): void
     {
-        $authorizationService = $this->prophesize(AuthorizationService::class);
+        $authorizationService = $this->createMock(AuthorizationService::class);
 
-        $container = $this->prophesize(ContainerInterface::class);
-        $container->get(AuthorizationService::class)->willReturn($authorizationService->reveal());
+        $container = $this->createMock(ContainerInterface::class);
+        $container->method('get')->with(AuthorizationService::class)->willReturn($authorizationService);
 
         $factory = new RouteGuardFactory();
 
-        $guard = $factory($container->reveal());
+        $guard = $factory($container);
 
         $this->assertInstanceOf(RouteGuard::class, $guard);
     }
@@ -47,12 +44,12 @@ class RouteGuardFactoryTest extends TestCase
      */
     public function it_creates_route_guard_with_exposing_message_name(): void
     {
-        $authorizationService = $this->prophesize(AuthorizationService::class);
+        $authorizationService = $this->createMock(AuthorizationService::class);
 
-        $container = $this->prophesize(ContainerInterface::class);
-        $container->get(AuthorizationService::class)->willReturn($authorizationService->reveal());
+        $container = $this->createMock(ContainerInterface::class);
+        $container->method('get')->with(AuthorizationService::class)->willReturn($authorizationService);
 
-        $guard = RouteGuardFactory::{'exposeMessageName'}($container->reveal());
+        $guard = RouteGuardFactory::{'exposeMessageName'}($container);
 
         $this->assertInstanceOf(RouteGuard::class, $guard);
     }

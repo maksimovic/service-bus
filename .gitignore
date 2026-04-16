@@ -9,7 +9,9 @@ nbproject
 .php_cs.cache
 .project
 .settings
-vendor
+vendor/
 composer.lock
 docs/html
 .phpunit.result.cache
+.phpunit.cache/
+build/

@@ -21,13 +21,9 @@ use Prooph\ServiceBus\EventBus;
 use Prooph\ServiceBus\Plugin\MessageProducerPlugin;
 use ProophTest\ServiceBus\Mock\DoSomething;
 use ProophTest\ServiceBus\Mock\SomethingDone;
-use Prophecy\Argument;
-use Prophecy\PhpUnit\ProphecyTrait;
 
 class MessageProducerPluginTest extends TestCase
 {
-    use ProphecyTrait;
-
     /**
      * @test
      */
@@ -35,11 +31,11 @@ class MessageProducerPluginTest extends TestCase
     {
         $command = new DoSomething(['foo' => 'bar']);
 
-        $messageProducer = $this->prophesize(MessageProducer::class);
-        $messageProducer->__invoke(Argument::type(DoSomething::class))->shouldBeCalled();
+        $messageProducer = $this->createMock(MessageProducer::class);
+        $messageProducer->expects($this->once())->method('__invoke')->with($this->isInstanceOf(DoSomething::class));
         $commandBus = new CommandBus();
 
-        $messageProducerPlugin = new MessageProducerPlugin($messageProducer->reveal());
+        $messageProducerPlugin = new MessageProducerPlugin($messageProducer);
         $messageProducerPlugin->attachToMessageBus($commandBus);
 
         $handler = null;
@@ -52,7 +48,7 @@ class MessageProducerPluginTest extends TestCase
         );
 
         $commandBus->dispatch($command);
-        $this->assertSame($messageProducer->reveal(), $handler);
+        $this->assertSame($messageProducer, $handler);
     }
 
     /**
@@ -62,10 +58,10 @@ class MessageProducerPluginTest extends TestCase
     {
         $event = new SomethingDone(['foo' => 'bar']);
 
-        $messageProducer = $this->prophesize(MessageProducer::class);
+        $messageProducer = $this->createMock(MessageProducer::class);
         $eventBus = new EventBus();
 
-        $messageProducerPlugin = new MessageProducerPlugin($messageProducer->reveal());
+        $messageProducerPlugin = new MessageProducerPlugin($messageProducer);
         $messageProducerPlugin->attachToMessageBus($eventBus);
 
         $listeners = null;
@@ -78,6 +74,6 @@ class MessageProducerPluginTest extends TestCase
         );
 
         $eventBus->dispatch($event);
-        $this->assertSame($messageProducer->reveal(), $listeners[0]);
+        $this->assertSame($messageProducer, $listeners[0]);
     }
 }

@@ -31,7 +31,7 @@ class QueryBus extends MessageBus
     public const EVENT_PARAM_PROMISE = 'query-promise';
     public const EVENT_PARAM_DEFERRED = 'query-deferred';
 
-    public function __construct(ActionEventEmitter $actionEventEmitter = null)
+    public function __construct(?ActionEventEmitter $actionEventEmitter = null)
     {
         parent::__construct($actionEventEmitter);
 

@@ -22,6 +22,7 @@ use Prooph\ServiceBus\Plugin\ListenerExceptionCollectionMode;
 class ListenerExceptionCollectionModeTest extends TestCase
 {
     private $eventBus;
+    private $cut;
 
     protected function setUp(): void
     {

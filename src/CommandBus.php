@@ -34,7 +34,7 @@ class CommandBus extends MessageBus
      */
     private $isDispatching = false;
 
-    public function __construct(ActionEventEmitter $actionEventEmitter = null)
+    public function __construct(?ActionEventEmitter $actionEventEmitter = null)
     {
         parent::__construct($actionEventEmitter);
 

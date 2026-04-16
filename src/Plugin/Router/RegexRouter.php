@@ -39,7 +39,7 @@ class RegexRouter extends AbstractPlugin implements MessageBusRouterPlugin
     /**
      * @param null|array[pattern => handler|handler[]] $patternMap
      */
-    public function __construct(array $patternMap = null)
+    public function __construct(?array $patternMap = null)
     {
         if (null === $patternMap) {
             return;

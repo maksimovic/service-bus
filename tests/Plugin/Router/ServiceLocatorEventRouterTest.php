@@ -19,21 +19,18 @@ use Prooph\ServiceBus\EventBus;
 use Prooph\ServiceBus\MessageBus;
 use Prooph\ServiceBus\Plugin\Router\ServiceLocatorEventRouter;
 use ProophTest\ServiceBus\Mock\MessageHandler;
-use Prophecy\PhpUnit\ProphecyTrait;
 use Psr\Container\ContainerInterface;
 
 class ServiceLocatorEventRouterTest extends TestCase
 {
-    use ProphecyTrait;
-
     /**
      * @test
      */
     public function it_routes()
     {
-        $container = $this->prophesize(ContainerInterface::class);
-        $container->has('event')->willReturn(true)->shouldBeCalled();
-        $container->get('event')->willReturn(new MessageHandler())->shouldBeCalled();
+        $container = $this->createMock(ContainerInterface::class);
+        $container->expects($this->once())->method('has')->with('event')->willReturn(true);
+        $container->expects($this->once())->method('get')->with('event')->willReturn(new MessageHandler());
 
         $eventBus = new EventBus();
 
@@ -45,7 +42,7 @@ class ServiceLocatorEventRouterTest extends TestCase
             ]
         );
 
-        $router = new ServiceLocatorEventRouter($container->reveal());
+        $router = new ServiceLocatorEventRouter($container);
         $router->attachToMessageBus($eventBus);
 
         $router->onRouteMessage($actionEvent);
