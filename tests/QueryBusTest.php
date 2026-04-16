@@ -25,7 +25,7 @@ use ProophTest\ServiceBus\Mock\ErrorProducer;
 use ProophTest\ServiceBus\Mock\FetchSomething;
 use ProophTest\ServiceBus\Mock\Finder;
 use React\Promise\Deferred;
-use React\Promise\Promise;
+use React\Promise\PromiseInterface;
 
 class QueryBusTest extends TestCase
 {
@@ -190,7 +190,7 @@ class QueryBusTest extends TestCase
         $promise = $this->queryBus->dispatch($customMessage);
 
         $this->assertSame($customMessage, $handler->getLastMessage());
-        $this->assertInstanceOf(Promise::class, $promise);
+        $this->assertInstanceOf(PromiseInterface::class, $promise);
         $this->assertInstanceOf(Deferred::class, $handler->getLastDeferred());
     }
 
@@ -308,7 +308,7 @@ class QueryBusTest extends TestCase
         $promise = $this->queryBus->dispatch($customMessage);
 
         $this->assertNull($handler->getLastMessage());
-        $this->assertInstanceOf(Promise::class, $promise);
+        $this->assertInstanceOf(PromiseInterface::class, $promise);
         $this->assertNull($handler->getLastDeferred());
     }
 
@@ -317,8 +317,6 @@ class QueryBusTest extends TestCase
      */
     public function it_throws_exception_if_message_was_not_handled(): void
     {
-        $this->expectException(RuntimeException::class);
-
         $this->queryBus->attach(
             MessageBus::EVENT_DISPATCH,
             function (ActionEvent $e): void {
@@ -329,7 +327,12 @@ class QueryBusTest extends TestCase
 
         $promise = $this->queryBus->dispatch('throw it');
 
-        $promise->done();
+        $exception = null;
+        $promise->catch(function (\Throwable $e) use (&$exception): void {
+            $exception = $e;
+        });
+
+        $this->assertInstanceOf(RuntimeException::class, $exception);
     }
 
     /**
@@ -361,7 +364,6 @@ class QueryBusTest extends TestCase
         );
 
         $promise = $this->queryBus->dispatch('throw an exception!');
-        $promise->done();
 
         $this->assertTrue($exceptionParamWasSet);
     }

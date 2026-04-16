@@ -17,7 +17,7 @@ use Prooph\Common\Event\ActionEvent;
 use Prooph\ServiceBus\MessageBus;
 use Prooph\ServiceBus\Plugin\AbstractPlugin;
 use Prooph\ServiceBus\QueryBus;
-use React\Promise\Promise;
+use React\Promise\PromiseInterface;
 
 final class FinalizeGuard extends AbstractPlugin
 {
@@ -45,7 +45,7 @@ final class FinalizeGuard extends AbstractPlugin
                 $promise = $actionEvent->getParam(QueryBus::EVENT_PARAM_PROMISE);
                 $messageName = $actionEvent->getParam(MessageBus::EVENT_PARAM_MESSAGE_NAME);
 
-                if ($promise instanceof Promise) {
+                if ($promise instanceof PromiseInterface) {
                     $newPromise = $promise->then(function ($result) use ($actionEvent, $messageName) {
                         if (! $this->authorizationService->isGranted($messageName, $result)) {
                             $actionEvent->stopPropagation(true);
