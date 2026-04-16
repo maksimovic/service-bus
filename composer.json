@@ -1,5 +1,5 @@
 {
-    "name": "prooph/service-bus",
+    "name": "maksimovic/service-bus",
     "description": "PHP Enterprise Service Bus Implementation supporting CQRS and DDD",
     "type": "library",
     "license": "BSD-3-Clause",
@@ -23,22 +23,17 @@
     "minimum-stability": "dev",
     "prefer-stable": true,
     "require": {
-        "php": "^7.3 | ^8.0",
+        "php": "^8.1",
         "prooph/common" : "^4.0.0"
     },
     "require-dev": {
-        "react/promise" : "^2.4.1",
-        "phpunit/phpunit": "^9.3",
-        "phpspec/prophecy": "^1.9",
-        "phpspec/prophecy-phpunit": "^2.0",
-        "prooph/php-cs-fixer-config": "^0.4",
-        "satooshi/php-coveralls": "^1.0",
+        "react/promise" : "^3.3",
+        "phpunit/phpunit": "^10.5",
         "psr/container": "^1.0",
-        "sandrokeil/interop-config": "^2.0.1",
-        "prooph/bookdown-template": "^0.2.3"
+        "sandrokeil/interop-config": "^2.0.1"
     },
     "suggest": {
-        "react/promise": "^2.4.1 for usage with provided QueryBus",
+        "react/promise": "^3.3 for usage with provided QueryBus",
         "prooph/event-store-bus-bridge": "Let the EventBus dispatch persisted DomainEvents",
         "zendframework/zend-servicemanager": "Use Zend ServiceManager to lazy load your handlers and listeners",
         "prooph/service-bus-zfc-rbac-bridge": "Use ZfcRbac as authorization service for route and finalize guard",
@@ -65,6 +60,7 @@
         ],
         "cs": "php-cs-fixer fix -v --diff --dry-run",
         "cs-fix": "php-cs-fixer fix -v --diff",
-        "test": "phpunit"
+        "test": "phpunit",
+        "test:coverage": "phpunit --coverage-text --coverage-html build/coverage --coverage-clover build/logs/clover.xml"
     }
 }

@@ -46,7 +46,7 @@ abstract class MessageBus
      */
     protected $events;
 
-    public function __construct(ActionEventEmitter $actionEventEmitter = null)
+    public function __construct(?ActionEventEmitter $actionEventEmitter = null)
     {
         if (null === $actionEventEmitter) {
             $actionEventEmitter = new ProophActionEventEmitter([

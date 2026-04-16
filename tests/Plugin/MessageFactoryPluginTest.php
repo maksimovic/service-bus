@@ -20,28 +20,25 @@ use Prooph\ServiceBus\CommandBus;
 use Prooph\ServiceBus\Exception\MessageDispatchException;
 use Prooph\ServiceBus\Plugin\MessageFactoryPlugin;
 use ProophTest\ServiceBus\Mock\DoSomething;
-use Prophecy\Argument;
-use Prophecy\PhpUnit\ProphecyTrait;
 
 class MessageFactoryPluginTest extends TestCase
 {
-    use ProphecyTrait;
-
     /**
      * @test
      */
     public function it_turns_a_message_given_as_array_into_a_message_object_using_a_factory(): void
     {
         $commandBus = new CommandBus();
-        $messageFactory = $this->prophesize(MessageFactory::class);
+        $messageFactory = $this->createMock(MessageFactory::class);
 
-        $messageFactory->createMessageFromArray('custom-message', Argument::any())->will(function ($args): DoSomething {
-            list($messageName, $messageArr) = $args;
-
+        $messageFactory->method('createMessageFromArray')->with(
+            'custom-message',
+            $this->anything()
+        )->willReturnCallback(function (string $messageName, array $messageArr): DoSomething {
             return new DoSomething($messageArr['payload']);
         });
 
-        $factoryPlugin = new MessageFactoryPlugin($messageFactory->reveal());
+        $factoryPlugin = new MessageFactoryPlugin($messageFactory);
         $factoryPlugin->attachToMessageBus($commandBus);
 
         $handled = false;
@@ -81,9 +78,9 @@ class MessageFactoryPluginTest extends TestCase
     public function it_will_return_early_if_message_name_not_present_in_message(): void
     {
         $commandBus = new CommandBus();
-        $messageFactory = $this->prophesize(MessageFactory::class);
+        $messageFactory = $this->createMock(MessageFactory::class);
 
-        $factoryPlugin = new MessageFactoryPlugin($messageFactory->reveal());
+        $factoryPlugin = new MessageFactoryPlugin($messageFactory);
         $factoryPlugin->attachToMessageBus($commandBus);
 
         $commandBus->attach(

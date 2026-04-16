@@ -34,7 +34,7 @@ class SingleHandlerRouter extends AbstractPlugin implements MessageBusRouterPlug
     /**
      * @param null|array[messageName => messageHandler] $commandMap
      */
-    public function __construct(array $messageMap = null)
+    public function __construct(?array $messageMap = null)
     {
         if (null === $messageMap) {
             return;

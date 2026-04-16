@@ -35,7 +35,7 @@ class EventRouter extends AbstractPlugin implements MessageBusRouterPlugin
     /**
      * @param null|array[eventName => eventListener] $eventMap
      */
-    public function __construct(array $eventMap = null)
+    public function __construct(?array $eventMap = null)
     {
         if (null === $eventMap) {
             return;

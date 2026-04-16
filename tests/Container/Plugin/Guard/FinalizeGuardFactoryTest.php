@@ -18,26 +18,23 @@ use Prooph\ServiceBus\Container\Plugin\Guard\FinalizeGuardFactory;
 use Prooph\ServiceBus\Exception\InvalidArgumentException;
 use Prooph\ServiceBus\Plugin\Guard\AuthorizationService;
 use Prooph\ServiceBus\Plugin\Guard\FinalizeGuard;
-use Prophecy\PhpUnit\ProphecyTrait;
 use Psr\Container\ContainerInterface;
 
 class FinalizeGuardFactoryTest extends TestCase
 {
-    use ProphecyTrait;
-
     /**
      * @test
      */
     public function it_creates_route_guard(): void
     {
-        $authorizationService = $this->prophesize(AuthorizationService::class);
+        $authorizationService = $this->createMock(AuthorizationService::class);
 
-        $container = $this->prophesize(ContainerInterface::class);
-        $container->get(AuthorizationService::class)->willReturn($authorizationService->reveal());
+        $container = $this->createMock(ContainerInterface::class);
+        $container->method('get')->with(AuthorizationService::class)->willReturn($authorizationService);
 
         $factory = new FinalizeGuardFactory();
 
-        $guard = $factory($container->reveal());
+        $guard = $factory($container);
 
         $this->assertInstanceOf(FinalizeGuard::class, $guard);
     }
@@ -47,12 +44,12 @@ class FinalizeGuardFactoryTest extends TestCase
      */
     public function it_creates_route_guard_with_exposing_message_name(): void
     {
-        $authorizationService = $this->prophesize(AuthorizationService::class);
+        $authorizationService = $this->createMock(AuthorizationService::class);
 
-        $container = $this->prophesize(ContainerInterface::class);
-        $container->get(AuthorizationService::class)->willReturn($authorizationService->reveal());
+        $container = $this->createMock(ContainerInterface::class);
+        $container->method('get')->with(AuthorizationService::class)->willReturn($authorizationService);
 
-        $guard = FinalizeGuardFactory::{'exposeMessageName'}($container->reveal());
+        $guard = FinalizeGuardFactory::{'exposeMessageName'}($container);
 
         $this->assertInstanceOf(FinalizeGuard::class, $guard);
     }

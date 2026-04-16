@@ -31,14 +31,10 @@ use Prooph\ServiceBus\Plugin\Plugin;
 use Prooph\ServiceBus\Plugin\Router\RegexRouter;
 use Prooph\ServiceBus\QueryBus;
 use ProophTest\ServiceBus\Mock\NoopMessageProducer;
-use Prophecy\Argument;
-use Prophecy\PhpUnit\ProphecyTrait;
 use Psr\Container\ContainerInterface;
 
 class BusFactoriesTest extends TestCase
 {
-    use ProphecyTrait;
-
     /**
      * @test
      * @dataProvider provideBuses
@@ -48,11 +44,13 @@ class BusFactoriesTest extends TestCase
         string $busConfigKey,
         AbstractBusFactory $busFactory
     ): void {
-        $container = $this->prophesize(ContainerInterface::class);
-        $container->has('config')->willReturn(false);
-        $container->has(MessageFactory::class)->willReturn(false);
+        $container = $this->createMock(ContainerInterface::class);
+        $container->method('has')->willReturnMap([
+            ['config', false],
+            [MessageFactory::class, false],
+        ]);
 
-        $bus = $busFactory($container->reveal());
+        $bus = $busFactory($container);
 
         $this->assertInstanceOf($busClass, $bus);
     }
@@ -66,12 +64,16 @@ class BusFactoriesTest extends TestCase
         string $busConfigKey,
         AbstractBusFactory $busFactory
     ): void {
-        $container = $this->prophesize(ContainerInterface::class);
-        $container->has('config')->willReturn(true);
-        $container->get('config')->willReturn([]);
-        $container->has(MessageFactory::class)->willReturn(false);
+        $container = $this->createMock(ContainerInterface::class);
+        $container->method('has')->willReturnMap([
+            ['config', true],
+            [MessageFactory::class, false],
+        ]);
+        $container->method('get')->willReturnMap([
+            ['config', []],
+        ]);
 
-        $bus = $busFactory($container->reveal());
+        $bus = $busFactory($container);
 
         $this->assertInstanceOf($busClass, $bus);
     }
@@ -85,35 +87,38 @@ class BusFactoriesTest extends TestCase
         string $busConfigKey,
         AbstractBusFactory $busFactory
     ): void {
-        $container = $this->prophesize(ContainerInterface::class);
-        $firstPlugin = $this->prophesize(Plugin::class);
-        $secondPlugin = $this->prophesize(Plugin::class);
+        $firstPlugin = $this->createMock(Plugin::class);
+        $secondPlugin = $this->createMock(Plugin::class);
 
-        $container->has('config')->willReturn(true);
-        $container->get('config')->willReturn([
-            'prooph' => [
-                'service_bus' => [
-                    $busConfigKey => [
-                        'plugins' => [
-                            'first_plugin_service_id',
-                            'second_plugin_service_id',
+        $firstPlugin->expects($this->once())->method('attachToMessageBus')->with($this->isInstanceOf(MessageBus::class));
+        $secondPlugin->expects($this->once())->method('attachToMessageBus')->with($this->isInstanceOf(MessageBus::class));
+
+        $container = $this->createMock(ContainerInterface::class);
+
+        $container->method('has')->willReturnMap([
+            ['config', true],
+            ['first_plugin_service_id', true],
+            ['second_plugin_service_id', true],
+            [MessageFactory::class, false],
+        ]);
+        $container->method('get')->willReturnMap([
+            ['config', [
+                'prooph' => [
+                    'service_bus' => [
+                        $busConfigKey => [
+                            'plugins' => [
+                                'first_plugin_service_id',
+                                'second_plugin_service_id',
+                            ],
                         ],
                     ],
                 ],
-            ],
+            ]],
+            ['first_plugin_service_id', $firstPlugin],
+            ['second_plugin_service_id', $secondPlugin],
         ]);
 
-        $firstPlugin->attachToMessageBus(Argument::type(MessageBus::class))->shouldBeCalled();
-        $secondPlugin->attachToMessageBus(Argument::type(MessageBus::class))->shouldBeCalled();
-
-        $container->has('first_plugin_service_id')->willReturn(true);
-        $container->get('first_plugin_service_id')->willReturn($firstPlugin->reveal());
-        $container->has('second_plugin_service_id')->willReturn(true);
-        $container->get('second_plugin_service_id')->willReturn($secondPlugin->reveal());
-
-        $container->has(MessageFactory::class)->willReturn(false);
-
-        $bus = $busFactory($container->reveal());
+        $bus = $busFactory($container);
 
         $this->assertInstanceOf($busClass, $bus);
     }
@@ -129,26 +134,28 @@ class BusFactoriesTest extends TestCase
     ): void {
         $this->expectException(RuntimeException::class);
 
-        $container = $this->prophesize(ContainerInterface::class);
+        $container = $this->createMock(ContainerInterface::class);
 
-        $container->has('config')->willReturn(true);
-        $container->get('config')->willReturn([
-            'prooph' => [
-                'service_bus' => [
-                    $busConfigKey => [
-                        'plugins' => [
-                            'plugin_service_id',
+        $container->method('has')->willReturnMap([
+            ['config', true],
+            ['plugin_service_id', false],
+            [MessageFactory::class, false],
+        ]);
+        $container->method('get')->willReturnMap([
+            ['config', [
+                'prooph' => [
+                    'service_bus' => [
+                        $busConfigKey => [
+                            'plugins' => [
+                                'plugin_service_id',
+                            ],
                         ],
                     ],
                 ],
-            ],
+            ]],
         ]);
 
-        $container->has('plugin_service_id')->willReturn(false);
-
-        $container->has(MessageFactory::class)->willReturn(false);
-
-        $busFactory($container->reveal());
+        $busFactory($container);
     }
 
     /**
@@ -160,34 +167,37 @@ class BusFactoriesTest extends TestCase
         string $busConfigKey,
         AbstractBusFactory $busFactory
     ): void {
-        $container = $this->prophesize(ContainerInterface::class);
-        $message = $this->prophesize(Message::class);
+        $message = $this->createMock(Message::class);
+        $message->method('messageName')->willReturn('test_message');
 
-        $message->messageName()->willReturn('test_message');
         $handlerWasCalled = false;
 
-        $container->has('config')->willReturn(true);
-        $container->get('config')->willReturn([
-            'prooph' => [
-                'service_bus' => [
-                    $busConfigKey => [
-                        'router' => [
-                            'routes' => [
-                                'test_message' => function (Message $message) use (&$handlerWasCalled): void {
-                                    $handlerWasCalled = true;
-                                },
+        $container = $this->createMock(ContainerInterface::class);
+        $container->method('has')->willReturnMap([
+            ['config', true],
+            [MessageFactory::class, false],
+        ]);
+        $container->method('get')->willReturnMap([
+            ['config', [
+                'prooph' => [
+                    'service_bus' => [
+                        $busConfigKey => [
+                            'router' => [
+                                'routes' => [
+                                    'test_message' => function (Message $message) use (&$handlerWasCalled): void {
+                                        $handlerWasCalled = true;
+                                    },
+                                ],
                             ],
                         ],
                     ],
                 ],
-            ],
+            ]],
         ]);
 
-        $container->has(MessageFactory::class)->willReturn(false);
+        $bus = $busFactory($container);
 
-        $bus = $busFactory($container->reveal());
-
-        $bus->dispatch($message->reveal());
+        $bus->dispatch($message);
 
         $this->assertTrue($handlerWasCalled);
     }
@@ -201,35 +211,38 @@ class BusFactoriesTest extends TestCase
         string $busConfigKey,
         AbstractBusFactory $busFactory
     ): void {
-        $container = $this->prophesize(ContainerInterface::class);
-        $message = $this->prophesize(Message::class);
+        $message = $this->createMock(Message::class);
+        $message->method('messageName')->willReturn('test_message');
 
-        $message->messageName()->willReturn('test_message');
         $handlerWasCalled = false;
 
-        $container->has('config')->willReturn(true);
-        $container->get('config')->willReturn([
-            'prooph' => [
-                'service_bus' => [
-                    $busConfigKey => [
-                        'router' => [
-                            'type' => RegexRouter::class,
-                            'routes' => [
-                                '/^test_./' => function (Message $message) use (&$handlerWasCalled): void {
-                                    $handlerWasCalled = true;
-                                },
+        $container = $this->createMock(ContainerInterface::class);
+        $container->method('has')->willReturnMap([
+            ['config', true],
+            [MessageFactory::class, false],
+        ]);
+        $container->method('get')->willReturnMap([
+            ['config', [
+                'prooph' => [
+                    'service_bus' => [
+                        $busConfigKey => [
+                            'router' => [
+                                'type' => RegexRouter::class,
+                                'routes' => [
+                                    '/^test_./' => function (Message $message) use (&$handlerWasCalled): void {
+                                        $handlerWasCalled = true;
+                                    },
+                                ],
                             ],
                         ],
                     ],
                 ],
-            ],
+            ]],
         ]);
 
-        $container->has(MessageFactory::class)->willReturn(false);
+        $bus = $busFactory($container);
 
-        $bus = $busFactory($container->reveal());
-
-        $bus->dispatch($message->reveal());
+        $bus->dispatch($message);
 
         $this->assertTrue($handlerWasCalled);
     }
@@ -243,38 +256,42 @@ class BusFactoriesTest extends TestCase
         string $busConfigKey,
         AbstractBusFactory $busFactory
     ): void {
-        $container = $this->prophesize(ContainerInterface::class);
-        $message = $this->prophesize(Message::class);
-        $messageFactory = $this->prophesize(MessageFactory::class);
+        $message = $this->createMock(Message::class);
+        $messageFactory = $this->createMock(MessageFactory::class);
 
-        $message->messageName()->willReturn('test_message');
+        $message->method('messageName')->willReturn('test_message');
         $handlerWasCalled = false;
 
-        $container->has('config')->willReturn(true);
-        $container->get('config')->willReturn([
-            'prooph' => [
-                'service_bus' => [
-                    $busConfigKey => [
-                        'router' => [
-                            'type' => RegexRouter::class,
-                            'routes' => [
-                                '/^test_./' => function (Message $message) use (&$handlerWasCalled): void {
-                                    $handlerWasCalled = true;
-                                },
+        $container = $this->createMock(ContainerInterface::class);
+        $container->method('has')->willReturnMap([
+            ['config', true],
+            ['custom_message_factory', true],
+            [MessageFactory::class, false],
+        ]);
+        $container->method('get')->willReturnMap([
+            ['config', [
+                'prooph' => [
+                    'service_bus' => [
+                        $busConfigKey => [
+                            'router' => [
+                                'type' => RegexRouter::class,
+                                'routes' => [
+                                    '/^test_./' => function (Message $message) use (&$handlerWasCalled): void {
+                                        $handlerWasCalled = true;
+                                    },
+                                ],
                             ],
+                            'message_factory' => 'custom_message_factory',
                         ],
-                        'message_factory' => 'custom_message_factory',
                     ],
                 ],
-            ],
+            ]],
+            ['custom_message_factory', $messageFactory],
         ]);
 
-        $container->has('custom_message_factory')->willReturn(true);
-        $container->get('custom_message_factory')->willReturn($messageFactory);
+        $bus = $busFactory($container);
 
-        $bus = $busFactory($container->reveal());
-
-        $bus->dispatch($message->reveal());
+        $bus->dispatch($message);
 
         $this->assertTrue($handlerWasCalled);
     }
@@ -288,43 +305,48 @@ class BusFactoriesTest extends TestCase
         string $busConfigKey,
         AbstractBusFactory $busFactory
     ): void {
-        $container = $this->prophesize(ContainerInterface::class);
-        $message = $this->prophesize(AsyncMessage::class);
-        $messageFactory = $this->prophesize(MessageFactory::class);
         $messageProducer = new NoopMessageProducer();
-        $container->get('noop_message_producer')->willReturn($messageProducer);
 
-        $message->messageName()->willReturn('test_message');
-        $message->metadata()->willReturn([]);
-        $message->withAddedMetadata('handled-async', true)->willReturn($message->reveal());
+        $message = $this->createMock(AsyncMessage::class);
+        $messageFactory = $this->createMock(MessageFactory::class);
+
+        $message->method('messageName')->willReturn('test_message');
+        $message->method('metadata')->willReturn([]);
+        $message->method('withAddedMetadata')->with('handled-async', true)->willReturn($message);
         $handlerWasCalled = false;
 
-        $container->has('config')->willReturn(true);
-        $container->get('config')->willReturn([
-            'prooph' => [
-                'service_bus' => [
-                    $busConfigKey => [
-                        'router' => [
-                            'async_switch' => 'noop_message_producer',
-                            'type' => RegexRouter::class,
-                            'routes' => [
-                                '/^test_./' => function (Message $message) use (&$handlerWasCalled): void {
-                                    $handlerWasCalled = true;
-                                },
+        $container = $this->createMock(ContainerInterface::class);
+        $container->method('has')->willReturnMap([
+            ['config', true],
+            ['custom_message_factory', true],
+            [MessageFactory::class, false],
+        ]);
+        $container->method('get')->willReturnMap([
+            ['config', [
+                'prooph' => [
+                    'service_bus' => [
+                        $busConfigKey => [
+                            'router' => [
+                                'async_switch' => 'noop_message_producer',
+                                'type' => RegexRouter::class,
+                                'routes' => [
+                                    '/^test_./' => function (Message $message) use (&$handlerWasCalled): void {
+                                        $handlerWasCalled = true;
+                                    },
+                                ],
                             ],
+                            'message_factory' => 'custom_message_factory',
                         ],
-                        'message_factory' => 'custom_message_factory',
                     ],
                 ],
-            ],
+            ]],
+            ['noop_message_producer', $messageProducer],
+            ['custom_message_factory', $messageFactory],
         ]);
 
-        $container->has('custom_message_factory')->willReturn(true);
-        $container->get('custom_message_factory')->willReturn($messageFactory);
+        $bus = $busFactory($container);
 
-        $bus = $busFactory($container->reveal());
-
-        $bus->dispatch($message->reveal());
+        $bus->dispatch($message);
 
         $this->assertFalse($handlerWasCalled);
         $this->assertTrue($messageProducer->isInvoked());
@@ -339,37 +361,39 @@ class BusFactoriesTest extends TestCase
         string $busConfigKey,
         AbstractBusFactory $busFactory
     ): void {
-        $container = $this->prophesize(ContainerInterface::class);
-        $message = $this->prophesize(Message::class);
+        $message = $this->createMock(Message::class);
+        $message->expects($this->atLeastOnce())->method('messageName')->willReturn('test_message');
 
-        $message->messageName()->willReturn('test_message')->shouldBeCalled();
         $handlerWasCalled = false;
 
-        $container->has('config')->willReturn(true)->shouldBeCalled();
-        $container->get('config')->willReturn([
-            'prooph' => [
-                'service_bus' => [
-                    $busConfigKey => [
-                        'router' => [
-                            'routes' => [
-                                'test_message' => 'handler_service_id',
+        $container = $this->createMock(ContainerInterface::class);
+        $container->method('has')->willReturnMap([
+            ['config', true],
+            ['handler_service_id', true],
+            [MessageFactory::class, false],
+        ]);
+        $container->method('get')->willReturnMap([
+            ['config', [
+                'prooph' => [
+                    'service_bus' => [
+                        $busConfigKey => [
+                            'router' => [
+                                'routes' => [
+                                    'test_message' => 'handler_service_id',
+                                ],
                             ],
                         ],
                     ],
                 ],
-            ],
-        ])->shouldBeCalled();
+            ]],
+            ['handler_service_id', function (Message $message) use (&$handlerWasCalled): void {
+                $handlerWasCalled = true;
+            }],
+        ]);
 
-        $container->has('handler_service_id')->willReturn(true)->shouldBeCalled();
-        $container->get('handler_service_id')->willReturn(function (Message $message) use (&$handlerWasCalled): void {
-            $handlerWasCalled = true;
-        })->shouldBeCalled();
+        $bus = $busFactory($container);
 
-        $container->has(MessageFactory::class)->willReturn(false)->shouldBeCalled();
-
-        $bus = $busFactory($container->reveal());
-
-        $bus->dispatch($message->reveal());
+        $bus->dispatch($message);
 
         $this->assertTrue($handlerWasCalled);
     }
@@ -383,32 +407,43 @@ class BusFactoriesTest extends TestCase
         string $busConfigKey,
         AbstractBusFactory $busFactory
     ): void {
-        $container = $this->prophesize(ContainerInterface::class);
-        $message = $this->prophesize(Message::class);
+        $message = $this->createMock(Message::class);
+        $message->method('messageName')->willReturn('test_message');
 
-        $message->messageName()->willReturn('test_message');
+        $handlerServiceIdLookedUp = false;
 
-        $container->has('config')->willReturn(true);
-        $container->get('config')->willReturn([
-            'prooph' => [
-                'service_bus' => [
-                    $busConfigKey => [
-                        'router' => [
-                            'routes' => [
-                                'test_message' => 'handler_service_id',
+        $container = $this->createMock(ContainerInterface::class);
+        $container->method('has')->willReturnCallback(function (string $id) use (&$handlerServiceIdLookedUp) {
+            if ($id === 'handler_service_id') {
+                $handlerServiceIdLookedUp = true;
+                return false;
+            }
+            if ($id === 'config') {
+                return true;
+            }
+            if ($id === MessageFactory::class) {
+                return false;
+            }
+            return false;
+        });
+        $container->method('get')->willReturnMap([
+            ['config', [
+                'prooph' => [
+                    'service_bus' => [
+                        $busConfigKey => [
+                            'router' => [
+                                'routes' => [
+                                    'test_message' => 'handler_service_id',
+                                ],
                             ],
+                            'enable_handler_location' => false,
                         ],
-                        'enable_handler_location' => false,
                     ],
                 ],
-            ],
+            ]],
         ]);
 
-        $container->has(MessageFactory::class)->willReturn(false);
-
-        $container->has('handler_service_id')->shouldNotBeCalled();
-
-        $bus = $busFactory($container->reveal());
+        $bus = $busFactory($container);
 
         $bus->attach(
             MessageBus::EVENT_DISPATCH,
@@ -418,7 +453,9 @@ class BusFactoriesTest extends TestCase
             MessageBus::PRIORITY_INVOKE_HANDLER
         );
 
-        $bus->dispatch($message->reveal());
+        $bus->dispatch($message);
+
+        $this->assertFalse($handlerServiceIdLookedUp, 'handler_service_id should not be looked up when handler location is disabled');
     }
 
     /**
@@ -430,30 +467,31 @@ class BusFactoriesTest extends TestCase
         string $busConfigKey,
         AbstractBusFactory $busFactory
     ): void {
-        $container = $this->prophesize(ContainerInterface::class);
-        $firstPlugin = $this->prophesize(Plugin::class);
+        $firstPlugin = $this->createMock(Plugin::class);
+        $firstPlugin->expects($this->once())->method('attachToMessageBus')->with($this->isInstanceOf(MessageBus::class));
 
-        $container->has('config')->willReturn(true);
-        $container->get('config')->willReturn(new \ArrayObject([
-            'prooph' => [
-                'service_bus' => [
-                    $busConfigKey => [
-                        'plugins' => [
-                            'first_plugin_service_id',
+        $container = $this->createMock(ContainerInterface::class);
+        $container->method('has')->willReturnMap([
+            ['config', true],
+            ['first_plugin_service_id', true],
+            [MessageFactory::class, false],
+        ]);
+        $container->method('get')->willReturnMap([
+            ['config', new \ArrayObject([
+                'prooph' => [
+                    'service_bus' => [
+                        $busConfigKey => [
+                            'plugins' => [
+                                'first_plugin_service_id',
+                            ],
                         ],
                     ],
                 ],
-            ],
-        ]));
+            ])],
+            ['first_plugin_service_id', $firstPlugin],
+        ]);
 
-        $firstPlugin->attachToMessageBus(Argument::type(MessageBus::class))->shouldBeCalled();
-
-        $container->has('first_plugin_service_id')->willReturn(true);
-        $container->get('first_plugin_service_id')->willReturn($firstPlugin->reveal());
-
-        $container->has(MessageFactory::class)->willReturn(false);
-
-        $bus = $busFactory($container->reveal());
+        $bus = $busFactory($container);
 
         $this->assertInstanceOf($busClass, $bus);
     }
@@ -464,13 +502,17 @@ class BusFactoriesTest extends TestCase
      */
     public function it_creates_a_bus_from_static_call(string $busClass, string $busFactoryClass): void
     {
-        $container = $this->prophesize(ContainerInterface::class);
-        $container->has('config')->willReturn(true);
-        $container->has(MessageFactory::class)->willReturn(false);
-        $container->get('config')->willReturn([]);
+        $container = $this->createMock(ContainerInterface::class);
+        $container->method('has')->willReturnMap([
+            ['config', true],
+            [MessageFactory::class, false],
+        ]);
+        $container->method('get')->willReturnMap([
+            ['config', []],
+        ]);
 
         $factory = [$busFactoryClass, 'other_config_id'];
-        $this->assertInstanceOf($busClass, $factory($container->reveal()));
+        $this->assertInstanceOf($busClass, $factory($container));
     }
 
     /**
@@ -484,7 +526,7 @@ class BusFactoriesTest extends TestCase
         CommandBusFactory::other_config_id();
     }
 
-    public function provideBusFactoryClasses(): array
+    public static function provideBusFactoryClasses(): array
     {
         return [
             [CommandBus::class, CommandBusFactory::class],
@@ -493,7 +535,7 @@ class BusFactoriesTest extends TestCase
         ];
     }
 
-    public function provideBuses(): array
+    public static function provideBuses(): array
     {
         return [
             [CommandBus::class, 'command_bus', new CommandBusFactory()],

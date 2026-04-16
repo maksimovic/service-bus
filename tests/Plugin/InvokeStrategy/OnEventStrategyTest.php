@@ -27,13 +27,9 @@ use ProophTest\ServiceBus\Mock\CustomMessageEventHandler;
 use ProophTest\ServiceBus\Mock\CustomMessageEventHandler2;
 use ProophTest\ServiceBus\Mock\CustomMessageEventHandlerThrowingExceptions;
 use ProophTest\ServiceBus\Mock\CustomOnEventStrategy;
-use Prophecy\Argument;
-use Prophecy\PhpUnit\ProphecyTrait;
 
 class OnEventStrategyTest extends TestCase
 {
-    use ProphecyTrait;
-
     /**
      * @test
      */
@@ -65,9 +61,14 @@ class OnEventStrategyTest extends TestCase
     {
         $onEventStrategy = new OnEventStrategy();
 
-        $bus = $this->prophesize(EventBus::class);
-        $bus->attach(Argument::type('string'), Argument::type('callable'), Argument::type('integer'))
-            ->shouldBeCalled()
+        $bus = $this->createMock(EventBus::class);
+        $bus->expects($this->atLeastOnce())
+            ->method('attach')
+            ->with(
+                $this->isType('string'),
+                $this->isType('callable'),
+                $this->isType('int')
+            )
             ->willReturn(
                 new DefaultListenerHandler(
                     function (): void {
@@ -75,7 +76,7 @@ class OnEventStrategyTest extends TestCase
                 )
             );
 
-        $onEventStrategy->attachToMessageBus($bus->reveal());
+        $onEventStrategy->attachToMessageBus($bus);
     }
 
     /**

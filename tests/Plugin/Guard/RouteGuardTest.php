@@ -22,12 +22,9 @@ use Prooph\ServiceBus\MessageBus;
 use Prooph\ServiceBus\Plugin\Guard\AuthorizationService;
 use Prooph\ServiceBus\Plugin\Guard\RouteGuard;
 use Prooph\ServiceBus\Plugin\Guard\UnauthorizedException;
-use Prophecy\PhpUnit\ProphecyTrait;
 
 class RouteGuardTest extends TestCase
 {
-    use ProphecyTrait;
-
     /**
      * @var CommandBus
      */
@@ -46,10 +43,10 @@ class RouteGuardTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('CommandBus was not able to identify a CommandHandler for command stdClass');
 
-        $authorizationService = $this->prophesize(AuthorizationService::class);
-        $authorizationService->isGranted('stdClass', new \stdClass())->willReturn(true);
+        $authorizationService = $this->createMock(AuthorizationService::class);
+        $authorizationService->method('isGranted')->with('stdClass', $this->isInstanceOf(\stdClass::class))->willReturn(true);
 
-        $routeGuard = new RouteGuard($authorizationService->reveal());
+        $routeGuard = new RouteGuard($authorizationService);
         $routeGuard->attachToMessageBus($this->messageBus);
 
         try {
@@ -67,10 +64,10 @@ class RouteGuardTest extends TestCase
         $this->expectException(UnauthorizedException::class);
         $this->expectExceptionMessage('You are not authorized to access this resource');
 
-        $authorizationService = $this->prophesize(AuthorizationService::class);
-        $authorizationService->isGranted('stdClass', new \stdClass())->willReturn(false);
+        $authorizationService = $this->createMock(AuthorizationService::class);
+        $authorizationService->method('isGranted')->with('stdClass', $this->isInstanceOf(\stdClass::class))->willReturn(false);
 
-        $routeGuard = new RouteGuard($authorizationService->reveal());
+        $routeGuard = new RouteGuard($authorizationService);
         $routeGuard->attachToMessageBus($this->messageBus);
 
         $this->messageBus->attach(
@@ -96,10 +93,10 @@ class RouteGuardTest extends TestCase
         $this->expectException(UnauthorizedException::class);
         $this->expectExceptionMessage('You are not authorized to access the resource "stdClass"');
 
-        $authorizationService = $this->prophesize(AuthorizationService::class);
-        $authorizationService->isGranted('stdClass', new \stdClass())->willReturn(false);
+        $authorizationService = $this->createMock(AuthorizationService::class);
+        $authorizationService->method('isGranted')->with('stdClass', $this->isInstanceOf(\stdClass::class))->willReturn(false);
 
-        $routeGuard = new RouteGuard($authorizationService->reveal(), true);
+        $routeGuard = new RouteGuard($authorizationService, true);
         $routeGuard->attachToMessageBus($this->messageBus);
 
         $this->messageBus->attach(
@@ -123,10 +120,10 @@ class RouteGuardTest extends TestCase
     public function it_still_throws_unauthorizedexception_if_access_is_denied_while_other_finalize_listeners_are_available(): void
     {
         $this->expectException(UnauthorizedException::class);
-        $authorizationService = $this->prophesize(AuthorizationService::class);
-        $authorizationService->isGranted('stdClass', new \stdClass())->willReturn(false);
+        $authorizationService = $this->createMock(AuthorizationService::class);
+        $authorizationService->method('isGranted')->with('stdClass', $this->isInstanceOf(\stdClass::class))->willReturn(false);
 
-        $routeGuard = new RouteGuard($authorizationService->reveal());
+        $routeGuard = new RouteGuard($authorizationService);
         $routeGuard->attachToMessageBus($this->messageBus);
 
         $this->messageBus->attach(
@@ -159,10 +156,10 @@ class RouteGuardTest extends TestCase
         $this->messageBus = new EventBus();
 
         $this->expectException(UnauthorizedException::class);
-        $authorizationService = $this->prophesize(AuthorizationService::class);
-        $authorizationService->isGranted('stdClass', new \stdClass())->willReturn(false);
+        $authorizationService = $this->createMock(AuthorizationService::class);
+        $authorizationService->method('isGranted')->with('stdClass', $this->isInstanceOf(\stdClass::class))->willReturn(false);
 
-        $routeGuard = new RouteGuard($authorizationService->reveal());
+        $routeGuard = new RouteGuard($authorizationService);
         $routeGuard->attachToMessageBus($this->messageBus);
 
         $this->messageBus->attach(

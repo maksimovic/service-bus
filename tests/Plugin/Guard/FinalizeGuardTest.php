@@ -22,12 +22,9 @@ use Prooph\ServiceBus\Plugin\Guard\AuthorizationService;
 use Prooph\ServiceBus\Plugin\Guard\FinalizeGuard;
 use Prooph\ServiceBus\Plugin\Guard\UnauthorizedException;
 use Prooph\ServiceBus\QueryBus;
-use Prophecy\PhpUnit\ProphecyTrait;
 
 class FinalizeGuardTest extends TestCase
 {
-    use ProphecyTrait;
-
     /**
      * @var MessageBus
      */
@@ -43,12 +40,12 @@ class FinalizeGuardTest extends TestCase
      */
     public function it_allows_when_authorization_service_grants_access_without_deferred(): void
     {
-        $authorizationService = $this->prophesize(AuthorizationService::class);
-        $authorizationService->isGranted('test_event')->willReturn(true)->shouldBeCalled();
+        $authorizationService = $this->createMock(AuthorizationService::class);
+        $authorizationService->expects($this->once())->method('isGranted')->with('test_event')->willReturn(true);
 
         $messageBus = new EventBus();
 
-        $routeGuard = new FinalizeGuard($authorizationService->reveal());
+        $routeGuard = new FinalizeGuard($authorizationService);
         $routeGuard->attachToMessageBus($messageBus);
 
         $messageBus->dispatch('test_event');
@@ -59,10 +56,10 @@ class FinalizeGuardTest extends TestCase
      */
     public function it_allows_when_authorization_service_grants_access_with_deferred(): void
     {
-        $authorizationService = $this->prophesize(AuthorizationService::class);
-        $authorizationService->isGranted('test_event', 'result')->willReturn(true)->shouldBeCalled();
+        $authorizationService = $this->createMock(AuthorizationService::class);
+        $authorizationService->expects($this->once())->method('isGranted')->with('test_event', 'result')->willReturn(true);
 
-        $routeGuard = new FinalizeGuard($authorizationService->reveal());
+        $routeGuard = new FinalizeGuard($authorizationService);
         $routeGuard->attachToMessageBus($this->messageBus);
 
         $this->messageBus->attach(
@@ -76,7 +73,7 @@ class FinalizeGuardTest extends TestCase
         );
 
         $promise = $this->messageBus->dispatch('test_event');
-        $promise->done(function ($result) {
+        $promise->then(function ($result) {
             $this->assertNotNull($result);
             $this->assertEquals('result', $result);
         });
@@ -92,10 +89,10 @@ class FinalizeGuardTest extends TestCase
 
         $this->messageBus = new EventBus();
 
-        $authorizationService = $this->prophesize(AuthorizationService::class);
-        $authorizationService->isGranted('test_event')->willReturn(false);
+        $authorizationService = $this->createMock(AuthorizationService::class);
+        $authorizationService->method('isGranted')->with('test_event')->willReturn(false);
 
-        $routeGuard = new FinalizeGuard($authorizationService->reveal());
+        $routeGuard = new FinalizeGuard($authorizationService);
         $routeGuard->attachToMessageBus($this->messageBus);
 
         $this->messageBus->attach(
@@ -119,13 +116,10 @@ class FinalizeGuardTest extends TestCase
      */
     public function it_stops_propagation_and_throws_unauthorizedexception_when_authorization_service_denies_access_with_deferred(): void
     {
-        $this->expectException(UnauthorizedException::class);
-        $this->expectExceptionMessage('You are not authorized to access this resource');
+        $authorizationService = $this->createMock(AuthorizationService::class);
+        $authorizationService->method('isGranted')->with('test_event', 'result')->willReturn(false);
 
-        $authorizationService = $this->prophesize(AuthorizationService::class);
-        $authorizationService->isGranted('test_event', 'result')->willReturn(false);
-
-        $routeGuard = new FinalizeGuard($authorizationService->reveal());
+        $routeGuard = new FinalizeGuard($authorizationService);
         $routeGuard->attachToMessageBus($this->messageBus);
 
         $this->messageBus->attach(
@@ -138,12 +132,16 @@ class FinalizeGuardTest extends TestCase
             QueryBus::PRIORITY_LOCATE_HANDLER + 1000
         );
 
-        try {
-            $promise = $this->messageBus->dispatch('test_event');
-            $promise->done();
-        } catch (MessageDispatchException $exception) {
-            throw $exception->getPrevious();
-        }
+        $caughtException = null;
+        $promise = $this->messageBus->dispatch('test_event');
+        $promise->catch(function (\Throwable $e) use (&$caughtException): void {
+            $caughtException = $e instanceof MessageDispatchException && $e->getPrevious() !== null
+                ? $e->getPrevious()
+                : $e;
+        });
+
+        $this->assertInstanceOf(UnauthorizedException::class, $caughtException);
+        $this->assertEquals('You are not authorized to access this resource', $caughtException->getMessage());
     }
 
     /**
@@ -156,10 +154,10 @@ class FinalizeGuardTest extends TestCase
 
         $this->messageBus = new EventBus();
 
-        $authorizationService = $this->prophesize(AuthorizationService::class);
-        $authorizationService->isGranted('test_event')->willReturn(false);
+        $authorizationService = $this->createMock(AuthorizationService::class);
+        $authorizationService->method('isGranted')->with('test_event')->willReturn(false);
 
-        $routeGuard = new FinalizeGuard($authorizationService->reveal(), true);
+        $routeGuard = new FinalizeGuard($authorizationService, true);
         $routeGuard->attachToMessageBus($this->messageBus);
 
         $this->messageBus->attach(
@@ -183,13 +181,10 @@ class FinalizeGuardTest extends TestCase
      */
     public function it_stops_propagation_and_throws_unauthorizedexception_when_authorization_service_denies_access_with_deferred_and_exposes_message_name(): void
     {
-        $this->expectException(UnauthorizedException::class);
-        $this->expectExceptionMessage('You are not authorized to access the resource "test_event"');
+        $authorizationService = $this->createMock(AuthorizationService::class);
+        $authorizationService->method('isGranted')->with('test_event', 'result')->willReturn(false);
 
-        $authorizationService = $this->prophesize(AuthorizationService::class);
-        $authorizationService->isGranted('test_event', 'result')->willReturn(false);
-
-        $finalizeGuard = new FinalizeGuard($authorizationService->reveal(), true);
+        $finalizeGuard = new FinalizeGuard($authorizationService, true);
         $finalizeGuard->attachToMessageBus($this->messageBus);
 
         $this->messageBus->attach(
@@ -202,7 +197,13 @@ class FinalizeGuardTest extends TestCase
             QueryBus::PRIORITY_LOCATE_HANDLER + 1000
         );
 
+        $caughtException = null;
         $promise = $this->messageBus->dispatch('test_event');
-        $promise->done();
+        $promise->catch(function (\Throwable $e) use (&$caughtException): void {
+            $caughtException = $e;
+        });
+
+        $this->assertInstanceOf(UnauthorizedException::class, $caughtException);
+        $this->assertEquals('You are not authorized to access the resource "test_event"', $caughtException->getMessage());
     }
 }

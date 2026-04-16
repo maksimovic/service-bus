@@ -21,12 +21,9 @@ use ProophTest\ServiceBus\Mock\CustomInvokableMessageHandler;
 use ProophTest\ServiceBus\Mock\CustomMessage;
 use ProophTest\ServiceBus\Mock\CustomMessageCommandHandler;
 use ProophTest\ServiceBus\Mock\MessageHandler;
-use Prophecy\PhpUnit\ProphecyTrait;
 
 class HandleCommandStrategyTest extends TestCase
 {
-    use ProphecyTrait;
-
     /**
      * @test
      */

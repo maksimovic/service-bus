@@ -19,21 +19,18 @@ use Prooph\ServiceBus\CommandBus;
 use Prooph\ServiceBus\MessageBus;
 use Prooph\ServiceBus\Plugin\Router\SingleHandlerServiceLocatorRouter;
 use ProophTest\ServiceBus\Mock\MessageHandler;
-use Prophecy\PhpUnit\ProphecyTrait;
 use Psr\Container\ContainerInterface;
 
 class SingleHandlerServiceLocatorRouterTest extends TestCase
 {
-    use ProphecyTrait;
-
     /**
      * @test
      */
     public function it_routes()
     {
-        $container = $this->prophesize(ContainerInterface::class);
-        $container->has('message')->willReturn(true)->shouldBeCalled();
-        $container->get('message')->willReturn(new MessageHandler())->shouldBeCalled();
+        $container = $this->createMock(ContainerInterface::class);
+        $container->expects($this->once())->method('has')->with('message')->willReturn(true);
+        $container->expects($this->once())->method('get')->with('message')->willReturn(new MessageHandler());
 
         $commandBus = new CommandBus();
 
@@ -45,7 +42,7 @@ class SingleHandlerServiceLocatorRouterTest extends TestCase
             ]
         );
 
-        $router = new SingleHandlerServiceLocatorRouter($container->reveal());
+        $router = new SingleHandlerServiceLocatorRouter($container);
         $router->attachToMessageBus($commandBus);
 
         $router->onRouteMessage($actionEvent);
