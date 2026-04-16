@@ -60,6 +60,7 @@
         ],
         "cs": "php-cs-fixer fix -v --diff --dry-run",
         "cs-fix": "php-cs-fixer fix -v --diff",
-        "test": "phpunit"
+        "test": "phpunit",
+        "test:coverage": "phpunit --coverage-text --coverage-html build/coverage --coverage-clover build/logs/clover.xml"
     }
 }
