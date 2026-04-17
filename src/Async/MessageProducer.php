@@ -32,6 +32,8 @@ interface MessageProducer
      *       MUST either be resolved/rejected OR the message producer
      *       MUST throw a Prooph\ServiceBus\Exception\RuntimeException if it cannot
      *       handle the $deferred
+     *
+     * @param Deferred<mixed>|null $deferred
      */
     public function __invoke(Message $message, ?Deferred $deferred = null): void;
 }
