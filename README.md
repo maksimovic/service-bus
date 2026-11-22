@@ -1,6 +1,6 @@
 # Prooph Service Bus
 
-> Fork of [prooph/service-bus](https://github.com/prooph/service-bus) — maintained for PHP 8.1–8.5 compatibility.
+> Fork of [prooph/service-bus](https://github.com/prooph/service-bus) — maintained for PHP 8.1–8.6 compatibility.
 
 PHP lightweight message bus supporting CQRS and micro services.
 
@@ -23,7 +23,7 @@ The upstream package was last released in 2021 and is no longer maintained. This
 - Upgrades PHPUnit to `^10.5` with schema migration
 - Migrates tests from `phpspec/prophecy` to native PHPUnit mocks
 - Upgrades `react/promise` to `^3.3` (`Promise` → `PromiseInterface`, `done()` removal)
-- Replaces Travis CI with GitHub Actions (PHP 8.1–8.5 matrix)
+- Replaces Travis CI with GitHub Actions (PHP 8.1–8.6 matrix)
 
 Behavior is otherwise unchanged.
 
